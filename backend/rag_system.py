@@ -1,3 +1,4 @@
+import re
 from typing import List, Tuple, Optional, Dict
 import os
 from document_processor import DocumentProcessor
@@ -19,6 +20,8 @@ class RAGSystem:
         self.ai_generator = AIGenerator(config.ANTHROPIC_API_KEY, config.ANTHROPIC_MODEL)
         self.session_manager = SessionManager(config.MAX_HISTORY)
         
+        self.course_file_map: Dict[str, str] = {}  # course_title -> absolute file_path
+
         # Initialize search tools
         self.tool_manager = ToolManager()
         self.search_tool = CourseSearchTool(self.vector_store)
@@ -83,7 +86,10 @@ class RAGSystem:
                     # Check if this course might already exist
                     # We'll process the document to get the course ID, but only add if new
                     course, course_chunks = self.document_processor.process_course_document(file_path)
-                    
+
+                    if course:
+                        self.course_file_map[course.title] = os.path.abspath(file_path)
+
                     if course and course.title not in existing_course_titles:
                         # This is a new course - add it to the vector store
                         self.vector_store.add_course_metadata(course)
@@ -144,4 +150,55 @@ class RAGSystem:
         return {
             "total_courses": self.vector_store.get_course_count(),
             "course_titles": self.vector_store.get_existing_course_titles()
+        }
+
+    def get_lesson_content(self, course_title: str, lesson_number: Optional[int] = None) -> Optional[Dict]:
+        """
+        Return full lesson text and metadata for the lesson viewer.
+
+        Re-reads the source .txt file and extracts the raw lesson content
+        (before chunking), so the viewer shows the complete lesson.
+        """
+        file_path = self.course_file_map.get(course_title)
+        if not file_path:
+            return None
+
+        raw = self.document_processor.read_file(file_path)
+        lines = raw.strip().split('\n')
+
+        course, _ = self.document_processor.process_course_document(file_path)
+        if not course:
+            return None
+
+        # Extract each lesson's title, link, and raw content lines
+        lessons: Dict[int, Dict] = {}
+        current_num = None
+
+        for i, line in enumerate(lines):
+            m = re.match(r'^Lesson\s+(\d+):\s*(.+)$', line.strip(), re.IGNORECASE)
+            if m:
+                current_num = int(m.group(1))
+                title = m.group(2).strip()
+                lesson_link = None
+                if i + 1 < len(lines):
+                    lm = re.match(r'^Lesson Link:\s*(.+)$', lines[i + 1].strip(), re.IGNORECASE)
+                    if lm:
+                        lesson_link = lm.group(1).strip()
+                lessons[current_num] = {"title": title, "lesson_link": lesson_link, "lines": []}
+            elif current_num is not None:
+                if not re.match(r'^Lesson Link:', line.strip(), re.IGNORECASE):
+                    lessons[current_num]["lines"].append(line)
+
+        target_num = lesson_number if lesson_number is not None else (min(lessons) if lessons else None)
+        lesson_data = lessons.get(target_num) if target_num is not None else None
+        if not lesson_data:
+            return None
+
+        return {
+            "course_title": course_title,
+            "course_link": course.course_link,
+            "lesson_number": target_num,
+            "lesson_title": lesson_data["title"],
+            "lesson_link": lesson_data["lesson_link"],
+            "content": '\n'.join(lesson_data["lines"]).strip(),
         }

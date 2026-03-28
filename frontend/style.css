@@ -241,8 +241,66 @@ header h1 {
 }
 
 .sources-content {
-    padding: 0 0.5rem 0.25rem 1.5rem;
+    padding: 0.25rem 0.5rem 0.25rem 0.5rem;
+}
+
+.sources-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-top: 0.25rem;
+}
+
+.source-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding: 0.55rem 0.85rem;
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--primary-color);
+    border-radius: 8px;
+    text-decoration: none;
+    transition: background 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+}
+
+.source-card:hover {
+    background: var(--surface-hover);
+    border-left-color: var(--primary-hover);
+    transform: translateY(-1px);
+}
+
+.source-card-icon {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+    color: var(--primary-color);
+}
+
+.source-icon {
+    width: 14px;
+    height: 14px;
+}
+
+.source-card-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.source-card-course {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    line-height: 1.3;
+}
+
+.source-card-lesson {
+    font-size: 0.775rem;
     color: var(--text-secondary);
+    letter-spacing: 0.01em;
 }
 
 /* Markdown formatting styles */
@@ -447,7 +505,8 @@ header h1 {
 
 /* Sidebar Headers */
 .stats-header,
-.suggested-header {
+.suggested-header,
+.history-header {
     font-size: 0.875rem;
     font-weight: 600;
     color: var(--text-secondary);
@@ -463,22 +522,26 @@ header h1 {
 }
 
 .stats-header:focus,
-.suggested-header:focus {
+.suggested-header:focus,
+.history-header:focus {
     color: var(--primary-color);
 }
 
 .stats-header:hover,
-.suggested-header:hover {
+.suggested-header:hover,
+.history-header:hover {
     color: var(--primary-color);
 }
 
 .stats-header::-webkit-details-marker,
-.suggested-header::-webkit-details-marker {
+.suggested-header::-webkit-details-marker,
+.history-header::-webkit-details-marker {
     display: none;
 }
 
 .stats-header::before,
-.suggested-header::before {
+.suggested-header::before,
+.history-header::before {
     content: '▶';
     display: inline-block;
     margin-right: 0.5rem;
@@ -487,7 +550,8 @@ header h1 {
 }
 
 details[open] .stats-header::before,
-details[open] .suggested-header::before {
+details[open] .suggested-header::before,
+details[open] .history-header::before {
     transform: rotate(90deg);
 }
 
@@ -715,4 +779,94 @@ details[open] .suggested-header::before {
     .sidebar {
         width: 280px;
     }
+}
+
+/* New Chat Button */
+.new-chat-button {
+    width: 100%;
+    padding: 0.625rem 1rem;
+    margin-bottom: 1rem;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.15s ease;
+    text-align: center;
+}
+
+.new-chat-button:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+}
+
+.new-chat-button:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+/* Chat History List */
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.5rem 0;
+}
+
+.history-item {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    background: var(--background);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    overflow: hidden;
+}
+
+.history-item:hover {
+    background: var(--surface-hover);
+    border-color: var(--primary-color);
+}
+
+.history-item:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.history-item.active {
+    background: var(--surface);
+    border-color: var(--primary-color);
+    border-left-width: 3px;
+}
+
+.history-title {
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.history-item.active .history-title {
+    color: var(--primary-color);
+}
+
+.history-meta {
+    font-size: 0.725rem;
+    color: var(--text-secondary);
+}
+
+.no-history {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-style: italic;
 }

@@ -1,3 +1,4 @@
+import urllib.parse
 from typing import Dict, Any, Optional, Protocol
 from abc import ABC, abstractmethod
 from vector_store import VectorStore, SearchResults
@@ -89,28 +90,36 @@ class CourseSearchTool(Tool):
         """Format search results with course and lesson context"""
         formatted = []
         sources = []  # Track sources for the UI
-        
+        seen = set()  # Deduplicate sources by (course_title, lesson_num)
+
         for doc, meta in zip(results.documents, results.metadata):
             course_title = meta.get('course_title', 'unknown')
             lesson_num = meta.get('lesson_number')
-            
+
             # Build context header
             header = f"[{course_title}"
             if lesson_num is not None:
                 header += f" - Lesson {lesson_num}"
             header += "]"
-            
-            # Track source for the UI
-            source = course_title
-            if lesson_num is not None:
-                source += f" - Lesson {lesson_num}"
-            sources.append(source)
-            
+
+            # Track source for the UI (deduplicated)
+            source_key = (course_title, lesson_num)
+            if source_key not in seen:
+                seen.add(source_key)
+                label = course_title
+                if lesson_num is not None:
+                    label += f" - Lesson {lesson_num}"
+                params = {"course": course_title}
+                if lesson_num is not None:
+                    params["lesson"] = lesson_num
+                url = "/lesson.html?" + urllib.parse.urlencode(params)
+                sources.append({"label": label, "url": url})
+
             formatted.append(f"{header}\n{doc}")
-        
+
         # Store sources for retrieval
         self.last_sources = sources
-        
+
         return "\n\n".join(formatted)
 
 class ToolManager:

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lesson Viewer</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { overflow: auto; }
+        .lesson-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 1.5rem;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 1.5rem;
+            color: var(--primary-color);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .back-link:hover { text-decoration: underline; }
+        .lesson-header {
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+        }
+        .lesson-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.4rem;
+        }
+        .course-name {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.4rem;
+        }
+        .course-name a, .external-link {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        .course-name a:hover, .external-link:hover { text-decoration: underline; }
+        .external-link {
+            display: inline-block;
+            font-size: 0.85rem;
+            margin-top: 0.25rem;
+        }
+        .lesson-body {
+            line-height: 1.8;
+            color: var(--text-primary);
+            white-space: pre-wrap;
+            font-size: 0.95rem;
+        }
+        .error-msg { color: #ef4444; }
+        .loading-msg { color: var(--text-secondary); }
+    </style>
+</head>
+<body>
+    <div class="lesson-container">
+        <a href="/" class="back-link">← Back to Chat</a>
+        <div id="lessonContent">
+            <p class="loading-msg">Loading lesson...</p>
+        </div>
+    </div>
+    <script>
+        (async () => {
+            const params = new URLSearchParams(window.location.search);
+            const courseTitle = params.get('course');
+            const lessonNumber = params.get('lesson');
+
+            if (!courseTitle) {
+                document.getElementById('lessonContent').innerHTML =
+                    '<p class="error-msg">Missing course parameter.</p>';
+                return;
+            }
+
+            const apiParams = new URLSearchParams({ course_title: courseTitle });
+            if (lessonNumber !== null) {
+                apiParams.set('lesson_number', lessonNumber);
+            }
+
+            try {
+                const resp = await fetch(`/api/lesson?${apiParams}`);
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const data = await resp.json();
+
+                document.title = `${data.lesson_title} — ${data.course_title}`;
+
+                const courseNameHtml = data.course_link
+                    ? `<a href="${data.course_link}" target="_blank">${data.course_title}</a>`
+                    : data.course_title;
+
+                const externalLinkHtml = data.lesson_link
+                    ? `<a href="${data.lesson_link}" class="external-link" target="_blank">View on DeepLearning.AI ↗</a>`
+                    : '';
+
+                document.getElementById('lessonContent').innerHTML = `
+                    <div class="lesson-header">
+                        <div class="lesson-title">Lesson ${data.lesson_number}: ${data.lesson_title}</div>
+                        <div class="course-name">From: ${courseNameHtml}</div>
+                        ${externalLinkHtml}
+                    </div>
+                    <div class="lesson-body" id="lessonBody"></div>
+                `;
+
+                // Set as text content to avoid XSS from raw lesson text
+                document.getElementById('lessonBody').textContent = data.content;
+            } catch (err) {
+                document.getElementById('lessonContent').innerHTML =
+                    `<p class="error-msg">Failed to load lesson: ${err.message}</p>`;
+            }
+        })();
+    </script>
+</body>
+</html>

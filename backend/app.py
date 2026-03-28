@@ -40,16 +40,47 @@ class QueryRequest(BaseModel):
     query: str
     session_id: Optional[str] = None
 
+class SourceLink(BaseModel):
+    """A source citation with display label and viewer URL"""
+    label: str
+    url: str
+
 class QueryResponse(BaseModel):
     """Response model for course queries"""
     answer: str
-    sources: List[str]
+    sources: List[SourceLink]
     session_id: str
 
 class CourseStats(BaseModel):
     """Response model for course statistics"""
     total_courses: int
     course_titles: List[str]
+
+class SessionSummary(BaseModel):
+    session_id: str
+    title: str
+    created_at: str
+    message_count: int
+
+class SessionListResponse(BaseModel):
+    sessions: List[SessionSummary]
+
+class MessageItem(BaseModel):
+    role: str
+    content: str
+
+class SessionMessagesResponse(BaseModel):
+    session_id: str
+    messages: List[MessageItem]
+
+class LessonResponse(BaseModel):
+    """Response model for lesson content viewer"""
+    course_title: str
+    course_link: Optional[str]
+    lesson_number: int
+    lesson_title: str
+    lesson_link: Optional[str]
+    content: str
 
 # API Endpoints
 
@@ -85,6 +116,20 @@ async def get_course_stats():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/sessions", response_model=SessionListResponse)
+async def list_sessions():
+    """Return the last 10 sessions with metadata"""
+    sessions = rag_system.session_manager.get_all_sessions()
+    return SessionListResponse(sessions=sessions)
+
+@app.get("/api/sessions/{session_id}", response_model=SessionMessagesResponse)
+async def get_session_messages(session_id: str):
+    """Return all messages for a given session"""
+    messages = rag_system.session_manager.get_session_messages(session_id)
+    if messages is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return SessionMessagesResponse(session_id=session_id, messages=messages)
+
 @app.on_event("startup")
 async def startup_event():
     """Load initial documents on startup"""
@@ -96,6 +141,15 @@ async def startup_event():
             print(f"Loaded {courses} courses with {chunks} chunks")
         except Exception as e:
             print(f"Error loading documents: {e}")
+
+@app.get("/api/lesson", response_model=LessonResponse)
+async def get_lesson(course_title: str, lesson_number: Optional[int] = None):
+    """Return full lesson content for the lesson viewer page"""
+    result = rag_system.get_lesson_content(course_title, lesson_number)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+    return LessonResponse(**result)
+
 
 # Custom static file handler with no-cache headers for development
 from fastapi.staticfiles import StaticFiles
@@ -116,4 +170,4 @@ class DevStaticFiles(StaticFiles):
     
     
 # Serve static files for the frontend
-app.mount("/", StaticFiles(directory="../frontend", html=True), name="static")
+app.mount("/", DevStaticFiles(directory="../frontend", html=True), name="static")
